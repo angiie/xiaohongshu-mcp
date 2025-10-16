@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 小红书 MCP 项目编译脚本
-# 编译所有可执行文件并放置到 build 目录
+# 支持选择性编译: home/login/mcp/all
 
 set -e  # 遇到错误立即退出
 
@@ -29,11 +29,45 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# 显示使用说明
+show_usage() {
+    echo "使用方法: $0 [target]"
+    echo ""
+    echo "编译目标:"
+    echo "  home    - 编译首页交互工具"
+    echo "  login   - 编译登录工具"
+    echo "  mcp     - 编译 MCP 服务器"
+    echo "  all     - 编译所有程序 (默认)"
+    echo ""
+    echo "示例:"
+    echo "  $0 home   # 仅编译 home 工具"
+    echo "  $0 all    # 编译所有程序"
+    echo "  $0        # 编译所有程序 (默认)"
+}
+
 # 获取项目根目录
 PROJECT_ROOT=$(cd "$(dirname "$0")" && pwd)
 BUILD_DIR="$PROJECT_ROOT/build"
 
+# 解析命令行参数
+TARGET="${1:-all}"
+
+case "$TARGET" in
+    home|login|mcp|all)
+        ;;
+    -h|--help|help)
+        show_usage
+        exit 0
+        ;;
+    *)
+        print_error "未知的编译目标: $TARGET"
+        show_usage
+        exit 1
+        ;;
+esac
+
 print_info "开始编译小红书 MCP 项目..."
+print_info "编译目标: $TARGET"
 print_info "项目根目录: $PROJECT_ROOT"
 print_info "编译输出目录: $BUILD_DIR"
 
@@ -58,89 +92,57 @@ fi
 GO_VERSION=$(go version)
 print_info "Go 版本: $GO_VERSION"
 
-# 编译主程序 (MCP 服务器)
-print_info "编译主程序 (MCP 服务器)..."
-go build -o "$BUILD_DIR/xiaohongshu-mcp" .
-if [ $? -eq 0 ]; then
-    print_success "主程序编译完成: $BUILD_DIR/xiaohongshu-mcp"
-else
-    print_error "主程序编译失败"
-    exit 1
-fi
+# 编译函数
+compile_mcp() {
+    print_info "编译 MCP 服务器..."
+    go build -o "$BUILD_DIR/mcp" .
+    if [ $? -eq 0 ]; then
+        print_success "MCP 服务器编译完成: $BUILD_DIR/mcp"
+    else
+        print_error "MCP 服务器编译失败"
+        exit 1
+    fi
+}
 
-# 编译登录工具
-print_info "编译登录工具..."
-go build -o "$BUILD_DIR/login" ./cmd/login
-if [ $? -eq 0 ]; then
-    print_success "登录工具编译完成: $BUILD_DIR/login"
-else
-    print_error "登录工具编译失败"
-    exit 1
-fi
+compile_login() {
+    print_info "编译登录工具..."
+    go build -o "$BUILD_DIR/login" ./cmd/login
+    if [ $? -eq 0 ]; then
+        print_success "登录工具编译完成: $BUILD_DIR/login"
+    else
+        print_error "登录工具编译失败"
+        exit 1
+    fi
+}
 
-# 编译首页交互工具
-print_info "编译首页交互工具..."
-go build -o "$BUILD_DIR/home" ./cmd/home
-if [ $? -eq 0 ]; then
-    print_success "首页交互工具编译完成: $BUILD_DIR/home"
-else
-    print_error "首页交互工具编译失败"
-    exit 1
-fi
+compile_home() {
+    print_info "编译首页交互工具..."
+    go build -o "$BUILD_DIR/home" ./cmd/home
+    if [ $? -eq 0 ]; then
+        print_success "首页交互工具编译完成: $BUILD_DIR/home"
+    else
+        print_error "首页交互工具编译失败"
+        exit 1
+    fi
+}
 
-# 复制配置文件和文档
-print_info "复制配置文件和文档..."
-
-# 复制 README 文件
-cp README.md "$BUILD_DIR/" 2>/dev/null || print_warning "README.md 不存在"
-cp README_EN.md "$BUILD_DIR/" 2>/dev/null || print_warning "README_EN.md 不存在"
-
-# 复制 cmd 目录的 README
-cp cmd/README.md "$BUILD_DIR/cmd_README.md" 2>/dev/null || print_warning "cmd/README.md 不存在"
-
-# 复制示例配置文件
-mkdir -p "$BUILD_DIR/examples"
-if [ -d "examples" ]; then
-    cp -r examples/* "$BUILD_DIR/examples/" 2>/dev/null || print_warning "复制示例文件失败"
-fi
-
-# 创建使用说明
-cat > "$BUILD_DIR/USAGE.md" << 'EOF'
-# 小红书 MCP 使用说明
-
-## 编译产物说明
-
-- `xiaohongshu-mcp`: 主程序，MCP 服务器
-- `login`: 登录工具，用于获取和保存登录状态
-- `home`: 首页交互工具，用于浏览器交互
-
-## 使用步骤
-
-1. 首先运行登录工具获取登录状态：
-   ```bash
-   ./login
-   ```
-
-2. 登录成功后，可以运行首页交互工具：
-   ```bash
-   ./home
-   ```
-
-3. 或者启动 MCP 服务器：
-   ```bash
-   ./xiaohongshu-mcp
-   ```
-
-## 注意事项
-
-- 确保系统已安装 Chrome 或 Chromium 浏览器
-- 登录状态会保存在 cookies.json 文件中
-- 首次使用需要先运行 login 工具
-
-更多详细信息请参考 README.md 文件。
-EOF
-
-print_success "使用说明创建完成: $BUILD_DIR/USAGE.md"
+# 根据目标进行编译
+case "$TARGET" in
+    mcp)
+        compile_mcp
+        ;;
+    login)
+        compile_login
+        ;;
+    home)
+        compile_home
+        ;;
+    all)
+        compile_mcp
+        compile_login
+        compile_home
+        ;;
+esac
 
 # 显示编译结果
 print_info "编译完成！文件列表："
@@ -150,6 +152,21 @@ ls -la "$BUILD_DIR"
 print_info "编译产物大小："
 du -h "$BUILD_DIR"/*
 
-print_success "所有编译任务完成！"
+print_success "编译任务完成！"
 print_info "编译产物位置: $BUILD_DIR"
-print_info "运行 './build/login' 开始使用"
+
+# 根据编译目标给出使用提示
+case "$TARGET" in
+    mcp)
+        print_info "运行 './build/mcp' 启动 MCP 服务器"
+        ;;
+    login)
+        print_info "运行 './build/login' 进行登录"
+        ;;
+    home)
+        print_info "运行 './build/home' 进行首页交互"
+        ;;
+    all)
+        print_info "运行 './build/login' 开始使用"
+        ;;
+esac
