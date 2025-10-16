@@ -37,6 +37,7 @@ go.work.sum
 # Build artifacts
 xhs-mcp
 xhs-login
+build/
 
 # Test scripts
 test_*.sh
