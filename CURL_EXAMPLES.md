@@ -5,7 +5,7 @@
 ### 1. 简单发布示例
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/content/publish \
+curl -X POST http://localhost:18060/api/v1/content/publish \
   -H "Content-Type: application/json" \
   -d '{
     "title": "我的第一篇小红书",
@@ -20,7 +20,7 @@ curl -X POST http://localhost:8080/api/v1/content/publish \
 ### 2. 多图片发布示例
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/content/publish \
+curl -X POST http://localhost:18060/api/v1/content/publish \
   -H "Content-Type: application/json" \
   -d '{
     "title": "美食探店记录",
@@ -37,7 +37,7 @@ curl -X POST http://localhost:8080/api/v1/content/publish \
 ### 3. 使用本地图片示例
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/content/publish \
+curl -X POST http://localhost:18060/api/v1/content/publish \
   -H "Content-Type: application/json" \
   -d '{
     "title": "今日穿搭分享",
@@ -53,7 +53,7 @@ curl -X POST http://localhost:8080/api/v1/content/publish \
 ### 4. 无标签发布示例
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/content/publish \
+curl -X POST http://localhost:18060/api/v1/content/publish \
   -H "Content-Type: application/json" \
   -d '{
     "title": "随手拍的风景",
@@ -69,7 +69,7 @@ curl -X POST http://localhost:8080/api/v1/content/publish \
 ### 5. 带详细内容的发布
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/content/publish \
+curl -X POST http://localhost:18060/api/v1/content/publish \
   -H "Content-Type: application/json" \
   -d '{
     "title": "护肤心得分享",
@@ -87,7 +87,7 @@ curl -X POST http://localhost:8080/api/v1/content/publish \
 ### 6. 旅行游记发布
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/content/publish \
+curl -X POST http://localhost:18060/api/v1/content/publish \
   -H "Content-Type: application/json" \
   -d '{
     "title": "三亚之旅完美收官",
@@ -107,21 +107,21 @@ curl -X POST http://localhost:8080/api/v1/content/publish \
 
 ```bash
 # 发布前先检查登录状态
-curl -X GET http://localhost:8080/api/v1/login/status
+curl -X GET http://localhost:18060/api/v1/login/status
 ```
 
 ### 8. 获取登录二维码（如果未登录）
 
 ```bash
 # 如果未登录，获取二维码
-curl -X GET http://localhost:8080/api/v1/login/qrcode
+curl -X GET http://localhost:18060/api/v1/login/qrcode
 ```
 
 ### 9. 健康检查
 
 ```bash
 # 检查服务是否正常运行
-curl -X GET http://localhost:8080/health
+curl -X GET http://localhost:18060/health
 ```
 
 ## 批量发布脚本示例
@@ -132,7 +132,7 @@ curl -X GET http://localhost:8080/health
 #!/bin/bash
 
 # 批量发布脚本
-BASE_URL="http://localhost:8080/api/v1/content/publish"
+BASE_URL="http://localhost:18060/api/v1/content/publish"
 
 # 发布内容数组
 declare -a posts=(
@@ -169,7 +169,7 @@ import json
 
 def publish_to_xiaohongshu(title, content, images, tags=None):
     """发布内容到小红书"""
-    url = "http://localhost:8080/api/v1/content/publish"
+    url = "http://localhost:18060/api/v1/content/publish"
     
     payload = {
         "title": title,

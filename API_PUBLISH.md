@@ -6,7 +6,7 @@
 
 ## 基础信息
 
-- **服务地址**: `http://localhost:8080` (默认端口)
+- **服务地址**: `http://localhost:18060` (默认端口)
 - **接口路径**: `/api/v1/content/publish`
 - **请求方法**: `POST`
 - **内容类型**: `application/json`

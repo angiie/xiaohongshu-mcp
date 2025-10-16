@@ -4,7 +4,7 @@
 
 该项目提供了小红书 MCP (Model Context Protocol) 服务的 HTTP API 接口，同时支持 MCP 协议和标准的 HTTP REST API。本文档描述了 HTTP API 的使用方法。
 
-**Base URL**: `http://localhost:8080`
+**Base URL**: `http://localhost:18060`
 
 **注意**: 以下响应示例仅展示主要字段结构，完整的字段信息请通过实际API调用查看。
 
