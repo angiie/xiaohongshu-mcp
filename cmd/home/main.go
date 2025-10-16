@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-rod/rod"
@@ -79,8 +80,8 @@ func handleHomePage() {
 		logrus.Info("成功导航到个人页面！")
 	}
 	
-	// 6. 保持程序运行，等待用户输入
-	waitForUserInput()
+	// 6. 保持程序运行，等待用户输入或浏览器关闭，保持程序运行状态
+	waitForUserInputOrBrowserClose(page)
 }
 
 // navigateToMyProfile 导航到个人页面
@@ -140,41 +141,115 @@ func navigateToMyProfile(page *rod.Page) error {
 	return nil
 }
 
-// waitForUserInput 等待用户输入命令，保持程序运行状态
+// isBrowserClosed 检查浏览器是否已关闭
+func isBrowserClosed(page *rod.Page) bool {
+	defer func() {
+		if r := recover(); r != nil {
+			// 如果发生 panic，说明浏览器已关闭
+			logrus.Debug("检测到浏览器关闭（通过 panic 恢复）")
+		}
+	}()
+	
+	// 尝试获取页面信息，如果浏览器关闭会抛出异常
+	_, err := page.Info()
+	return err != nil
+}
+
+// monitorBrowserStatus 监控浏览器状态
+func monitorBrowserStatus(page *rod.Page, done chan<- bool) {
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+	
+	for {
+		select {
+		case <-ticker.C:
+			if isBrowserClosed(page) {
+				logrus.Info("检测到浏览器已关闭，程序即将退出...")
+				done <- true
+				return
+			}
+		}
+	}
+}
+
+// waitForUserInputOrBrowserClose 等待用户输入命令或浏览器关闭，保持程序运行状态
 // 提供交互式命令行界面，允许用户查看帮助或退出程序
-func waitForUserInput() {
+// 同时监控浏览器状态，如果浏览器关闭则自动退出程序
+func waitForUserInputOrBrowserClose(page *rod.Page) {
 	fmt.Println("\n=== 小红书首页交互程序 ===")
 	fmt.Println("这是一个独立的首页交互程序")
 	fmt.Println("输入 'quit' 或 'exit' 退出程序，或按 Ctrl+C 强制退出")
+	fmt.Println("关闭浏览器窗口也会自动退出程序")
 	fmt.Print("请输入命令: ")
 	
-	scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() {
-		input := strings.TrimSpace(strings.ToLower(scanner.Text()))
-		
-		switch input {
-		case "quit", "exit", "q":
-			fmt.Println("正在退出程序...")
-			return
-		case "help", "h":
-			fmt.Println("可用命令:")
-			fmt.Println("  quit/exit/q - 退出程序")
-			fmt.Println("  help/h - 显示帮助信息")
-			fmt.Println("  status - 显示程序状态")
-		case "status":
-			fmt.Println("程序状态: 运行中")
-			fmt.Println("版本: 1.0.0")
-			fmt.Println("功能: 小红书首页交互")
-		case "":
-			// 空输入，继续等待
-		default:
-			fmt.Printf("未知命令: %s，输入 'help' 查看可用命令\n", input)
+	// 创建通道用于协调不同的监听器
+	done := make(chan bool, 1)
+	var wg sync.WaitGroup
+	
+	// 启动浏览器状态监控 goroutine
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		monitorBrowserStatus(page, done)
+	}()
+	
+	// 启动用户输入监听 goroutine
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			input := strings.TrimSpace(strings.ToLower(scanner.Text()))
+			
+			switch input {
+			case "quit", "exit", "q":
+				fmt.Println("正在退出程序...")
+				done <- true
+				return
+			case "help", "h":
+				fmt.Println("可用命令:")
+				fmt.Println("  quit/exit/q - 退出程序")
+				fmt.Println("  help/h - 显示帮助信息")
+				fmt.Println("  status - 显示程序状态")
+				fmt.Println("  browser - 检查浏览器状态")
+			case "status":
+				fmt.Println("程序状态: 运行中")
+				fmt.Println("版本: 1.0.0")
+				fmt.Println("功能: 小红书首页交互")
+			case "browser":
+				if isBrowserClosed(page) {
+					fmt.Println("浏览器状态: 已关闭")
+				} else {
+					fmt.Println("浏览器状态: 运行中")
+				}
+			case "":
+				// 空输入，继续等待
+			default:
+				fmt.Printf("未知命令: %s，输入 'help' 查看可用命令\n", input)
+			}
+			
+			// 检查是否需要退出
+			select {
+			case <-done:
+				return
+			default:
+				fmt.Print("请输入命令: ")
+			}
 		}
 		
-		fmt.Print("请输入命令: ")
-	}
+		if err := scanner.Err(); err != nil {
+			logrus.Errorf("读取输入时出错: %v", err)
+		}
+	}()
 	
-	if err := scanner.Err(); err != nil {
-		logrus.Errorf("读取输入时出错: %v", err)
-	}
+	// 等待任一监听器发出退出信号
+	<-done
+	
+	// 通知所有 goroutine 退出
+	close(done)
+	
+	// 等待所有 goroutine 完成
+	wg.Wait()
+	
+	logrus.Info("程序已退出")
 }
