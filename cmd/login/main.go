@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/proto"
@@ -47,7 +50,9 @@ func main() {
 				// 导航到首页
 				page.MustNavigate("https://www.xiaohongshu.com/explore").MustWaitLoad()
 				logrus.Info("已跳转到小红书首页")
-				return
+				
+				// 保持程序运行，等待用户输入
+				waitForUserInput()
 			} else {
 				logrus.Info("已保存的cookies已失效，将进行重新登录")
 			}
@@ -73,6 +78,13 @@ func main() {
 	logrus.Infof("当前登录状态: %v", status)
 
 	if status {
+		logrus.Info("检测到已登录状态，保持程序运行")
+		// 导航到首页
+		page.MustNavigate("https://www.xiaohongshu.com/explore").MustWaitLoad()
+		logrus.Info("已跳转到小红书首页")
+		
+		// 保持程序运行，等待用户输入
+		waitForUserInput()
 		return
 	}
 
@@ -94,6 +106,12 @@ func main() {
 
 	if status {
 		logrus.Info("登录成功！")
+		// 导航到首页
+		page.MustNavigate("https://www.xiaohongshu.com/explore").MustWaitLoad()
+		logrus.Info("已跳转到小红书首页")
+		
+		// 保持程序运行，等待用户输入
+		waitForUserInput()
 	} else {
 		logrus.Error("登录流程完成但仍未登录")
 	}
@@ -145,4 +163,37 @@ func loadCookies(page *rod.Page) error {
 
 	// 设置cookies到浏览器
 	return page.Browser().SetCookies(cookieParams)
+}
+
+// waitForUserInput 等待用户输入，保持程序运行
+func waitForUserInput() {
+	fmt.Println("\n=== 小红书登录程序 ===")
+	fmt.Println("浏览器将保持打开状态，你可以继续使用小红书")
+	fmt.Println("输入 'quit' 或 'exit' 退出程序，或按 Ctrl+C 强制退出")
+	fmt.Print("请输入命令: ")
+	
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		input := strings.TrimSpace(strings.ToLower(scanner.Text()))
+		
+		switch input {
+		case "quit", "exit", "q":
+			fmt.Println("正在退出程序...")
+			return
+		case "help", "h":
+			fmt.Println("可用命令:")
+			fmt.Println("  quit/exit/q - 退出程序")
+			fmt.Println("  help/h - 显示帮助信息")
+		case "":
+			// 空输入，继续等待
+		default:
+			fmt.Printf("未知命令: %s，输入 'help' 查看可用命令\n", input)
+		}
+		
+		fmt.Print("请输入命令: ")
+	}
+	
+	if err := scanner.Err(); err != nil {
+		logrus.Errorf("读取输入时出错: %v", err)
+	}
 }
