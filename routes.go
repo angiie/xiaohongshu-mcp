@@ -42,6 +42,7 @@ func setupRoutes(appServer *AppServer) *gin.Engine {
 		api.GET("/login/qrcode", appServer.getLoginQrcodeHandler)
 		api.POST("/publish", appServer.publishHandler)
 		api.POST("/publish_video", appServer.publishVideoHandler)
+		api.POST("/content/publish", appServer.publishContentHandler) // 新增的简化发布接口
 		api.GET("/feeds/list", appServer.listFeedsHandler)
 		api.GET("/feeds/search", appServer.searchFeedsHandler)
 		api.POST("/feeds/detail", appServer.getFeedDetailHandler)

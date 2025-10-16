@@ -199,12 +199,48 @@ func (s *AppServer) postCommentHandler(c *gin.Context) {
 	respondSuccess(c, result, result.Message)
 }
 
+// publishContentHandler 简化的发布文章接口
+func (s *AppServer) publishContentHandler(c *gin.Context) {
+	var req PublishContentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, http.StatusBadRequest, "INVALID_REQUEST",
+			"请求参数错误", err.Error())
+		return
+	}
+
+	// 转换为内部发布请求格式
+	publishReq := &PublishRequest{
+		Title:   req.Title,
+		Content: req.Content,
+		Images:  req.Images,
+		Tags:    req.Tags,
+	}
+
+	// 执行发布
+	result, err := s.xiaohongshuService.PublishContent(c.Request.Context(), publishReq)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "PUBLISH_FAILED",
+			"发布失败", err.Error())
+		return
+	}
+
+	// 返回简化的响应
+	response := PublishContentResponse{
+		Success: true,
+		PostID:  result.PostID,
+		Title:   result.Title,
+		Status:  result.Status,
+		Message: "文章发布成功",
+	}
+
+	respondSuccess(c, response, "文章发布成功")
+}
+
 // healthHandler 健康检查
 func healthHandler(c *gin.Context) {
-	respondSuccess(c, map[string]any{
-		"status":    "healthy",
-		"service":   "xiaohongshu-mcp",
-		"account":   "ai-report",
-		"timestamp": "now",
-	}, "服务正常")
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "ok",
+		"message": "服务运行正常",
+		"version": "1.0.0",
+	})
 }
