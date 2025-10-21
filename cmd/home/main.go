@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/go-rod/rod"
+	"github.com/go-rod/rod/lib/proto"
 	"github.com/sirupsen/logrus"
 	"github.com/xpzouying/xiaohongshu-mcp/browser"
 	"github.com/xpzouying/xiaohongshu-mcp/cookies"
@@ -141,6 +142,39 @@ func navigateToMyProfile(page *rod.Page) error {
 	return nil
 }
 
+// takeScreenshot 截取指定元素的截图
+func takeScreenshot(page *rod.Page, selector string) {
+	logrus.Infof("正在尝试为元素 '%s' 截图...", selector)
+
+	// 检查元素是否存在
+	if has, _, err := page.Has(selector); !has || err != nil {
+		logrus.Errorf("找不到要截图的元素 '%s'，错误: %v", selector, err)
+		return
+	}
+
+	// 获取元素并截图
+	element := page.MustElement(selector)
+	screenshot, err := element.Screenshot(proto.PageCaptureScreenshotFormatPng, 0)
+	if err != nil {
+		logrus.Errorf("为元素 '%s' 截图失败: %v", selector, err)
+		return
+	}
+
+	// 将截图保存到文件
+	shotDir := "shot"
+	if err := os.MkdirAll(shotDir, 0755); err != nil {
+		logrus.Errorf("创建截图目录失败: %v", err)
+		return
+	}
+	filePath := fmt.Sprintf("shot/shot_%s.png", time.Now().Format("20060102150405"))
+	if err := os.WriteFile(filePath, screenshot, 0644); err != nil {
+		logrus.Errorf("保存截图失败: %v", err)
+		return
+	}
+
+	logrus.Infof("截图成功！已保存到: %s", filePath)
+}
+
 // isBrowserClosed 检查浏览器是否已关闭
 func isBrowserClosed(page *rod.Page) bool {
 	defer func() {
@@ -212,6 +246,7 @@ func waitForUserInputOrBrowserClose(page *rod.Page) {
 				fmt.Println("  help/h - 显示帮助信息")
 				fmt.Println("  status - 显示程序状态")
 				fmt.Println("  browser - 检查浏览器状态")
+				fmt.Println("  shot - 截取用户信息的截图")
 			case "status":
 				fmt.Println("程序状态: 运行中")
 				fmt.Println("版本: 1.0.0")
@@ -222,6 +257,8 @@ func waitForUserInputOrBrowserClose(page *rod.Page) {
 				} else {
 					fmt.Println("浏览器状态: 运行中")
 				}
+			case "shot":
+				takeScreenshot(page, ".user-info")
 			case "":
 				// 空输入，继续等待
 			default:
