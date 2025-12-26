@@ -22,43 +22,54 @@ func main() {
 	logrus.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp: true,
 	})
-	
+
 	// 启动首页程序
-	handleHomePage()
+	var suffix string
+	if len(os.Args) > 1 {
+		suffix = strings.TrimSpace(os.Args[1])
+	}
+	handleHomePage(suffix)
 }
 
 // handleHomePage 处理已登录用户的首页逻辑
 // 读取 cookies.json 文件，打开浏览器，导航到小红书首页和个人页面
-func handleHomePage() {
+func handleHomePage(suffix string) {
 	logrus.Info("欢迎使用小红书首页交互程序")
-	
+
+	if suffix != "" {
+		base := cookies.GetCookiesFilePath()
+		routed := base + "." + suffix
+		_ = os.Setenv("COOKIES_PATH", routed)
+		logrus.Infof("使用路由 cookies 文件: %s", routed)
+	}
+
 	// 1. 初始化浏览器
 	logrus.Info("正在初始化浏览器...")
 	browserInstance := browser.NewBrowser(false) // false 表示非无头模式，可以看到浏览器界面
 	defer browserInstance.Close()
-	
+
 	page := browserInstance.NewPage()
 	defer page.Close()
-	
+
 	// 2. 检查并加载 cookies
 	logrus.Info("正在检查 cookies 文件...")
 	cookiesPath := cookies.GetCookiesFilePath()
 	if _, err := os.Stat(cookiesPath); os.IsNotExist(err) {
 		logrus.Fatalf("cookies 文件不存在: %s，请先运行登录程序", cookiesPath)
 	}
-	
+
 	logrus.Infof("找到 cookies 文件: %s", cookiesPath)
-	
+
 	// 3. 导航到小红书首页
 	logrus.Info("正在导航到小红书首页...")
 	navigate := xiaohongshu.NewNavigate(page)
 	if err := navigate.ToExplorePage(context.Background()); err != nil {
 		logrus.Fatalf("导航到首页失败: %v", err)
 	}
-	
+
 	// 等待页面加载
 	time.Sleep(2 * time.Second)
-	
+
 	// 4. 检查登录状态
 	logrus.Info("正在检查登录状态...")
 	loginAction := xiaohongshu.NewLogin(page)
@@ -66,21 +77,13 @@ func handleHomePage() {
 	if err != nil {
 		logrus.Fatalf("检查登录状态失败: %v", err)
 	}
-	
+
 	if !isLoggedIn {
 		logrus.Fatal("未检测到登录状态，请先运行登录程序")
 	}
-	
+
 	logrus.Info("登录状态确认成功！")
-	
-	// 5. 导航到个人页面（"我的链接"）
-	logrus.Info("正在导航到个人页面...")
-	if err := navigateToMyProfile(page); err != nil {
-		logrus.Errorf("导航到个人页面失败: %v", err)
-	} else {
-		logrus.Info("成功导航到个人页面！")
-	}
-	
+
 	// 6. 保持程序运行，等待用户输入或浏览器关闭，保持程序运行状态
 	waitForUserInputOrBrowserClose(page)
 }
@@ -88,10 +91,10 @@ func handleHomePage() {
 // navigateToMyProfile 导航到个人页面
 func navigateToMyProfile(page *rod.Page) error {
 	logrus.Info("正在导航到个人页面...")
-	
+
 	// 等待页面加载完成
 	time.Sleep(2 * time.Second)
-	
+
 	// 方法1: 尝试点击右上角的用户头像
 	userAvatarSelectors := []string{
 		".main-container .user .link-wrapper .channel",
@@ -100,13 +103,13 @@ func navigateToMyProfile(page *rod.Page) error {
 		"[data-testid='user-avatar']",
 		".user .avatar",
 	}
-	
+
 	for _, selector := range userAvatarSelectors {
 		if exists, _, _ := page.Has(selector); exists {
 			logrus.Infof("找到用户头像元素: %s，正在点击...", selector)
 			page.MustElement(selector).MustClick()
 			time.Sleep(3 * time.Second)
-			
+
 			// 检查是否成功进入个人页面
 			currentURL := page.MustInfo().URL
 			if currentURL != "https://www.xiaohongshu.com/explore" {
@@ -115,7 +118,7 @@ func navigateToMyProfile(page *rod.Page) error {
 			}
 		}
 	}
-	
+
 	// 方法2: 尝试通过菜单导航
 	logrus.Info("尝试通过菜单导航到个人页面...")
 	menuSelectors := []string{
@@ -123,7 +126,7 @@ func navigateToMyProfile(page *rod.Page) error {
 		".sidebar .my-profile",
 		"[href*='/user/profile']",
 	}
-	
+
 	for _, selector := range menuSelectors {
 		if exists, _, _ := page.Has(selector); exists {
 			logrus.Infof("找到菜单元素: %s，正在点击...", selector)
@@ -132,12 +135,12 @@ func navigateToMyProfile(page *rod.Page) error {
 			return nil
 		}
 	}
-	
+
 	// 方法3: 尝试直接导航到个人页面URL（通用路径）
 	logrus.Info("尝试直接导航到个人页面...")
 	page.MustNavigate("https://www.xiaohongshu.com/user/profile").MustWaitLoad()
 	time.Sleep(2 * time.Second)
-	
+
 	logrus.Info("已尝试导航到个人页面")
 	return nil
 }
@@ -183,7 +186,7 @@ func isBrowserClosed(page *rod.Page) bool {
 			logrus.Debug("检测到浏览器关闭（通过 panic 恢复）")
 		}
 	}()
-	
+
 	// 尝试获取页面信息，如果浏览器关闭会抛出异常
 	_, err := page.Info()
 	return err != nil
@@ -193,7 +196,7 @@ func isBrowserClosed(page *rod.Page) bool {
 func monitorBrowserStatus(page *rod.Page, done chan<- bool) {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -215,18 +218,18 @@ func waitForUserInputOrBrowserClose(page *rod.Page) {
 	fmt.Println("输入 'quit' 或 'exit' 退出程序，或按 Ctrl+C 强制退出")
 	fmt.Println("关闭浏览器窗口也会自动退出程序")
 	fmt.Print("请输入命令: ")
-	
+
 	// 创建通道用于协调不同的监听器
 	done := make(chan bool, 1)
 	var wg sync.WaitGroup
-	
+
 	// 启动浏览器状态监控 goroutine
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		monitorBrowserStatus(page, done)
 	}()
-	
+
 	// 启动用户输入监听 goroutine
 	wg.Add(1)
 	go func() {
@@ -234,7 +237,7 @@ func waitForUserInputOrBrowserClose(page *rod.Page) {
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
 			input := strings.TrimSpace(strings.ToLower(scanner.Text()))
-			
+
 			switch input {
 			case "quit", "exit", "q":
 				fmt.Println("正在退出程序...")
@@ -258,13 +261,20 @@ func waitForUserInputOrBrowserClose(page *rod.Page) {
 					fmt.Println("浏览器状态: 运行中")
 				}
 			case "shot":
-				takeScreenshot(page, ".user-info")
+				fmt.Println("正在跳转到个人页面并进行截图...")
+				if err := navigateToMyProfile(page); err != nil {
+					logrus.Errorf("导航到个人页面失败: %v", err)
+					fmt.Println("截图失败：无法导航到个人页面")
+				} else {
+					time.Sleep(2 * time.Second)
+					takeScreenshot(page, ".user-info")
+				}
 			case "":
 				// 空输入，继续等待
 			default:
 				fmt.Printf("未知命令: %s，输入 'help' 查看可用命令\n", input)
 			}
-			
+
 			// 检查是否需要退出
 			select {
 			case <-done:
@@ -273,20 +283,20 @@ func waitForUserInputOrBrowserClose(page *rod.Page) {
 				fmt.Print("请输入命令: ")
 			}
 		}
-		
+
 		if err := scanner.Err(); err != nil {
 			logrus.Errorf("读取输入时出错: %v", err)
 		}
 	}()
-	
+
 	// 等待任一监听器发出退出信号
 	<-done
-	
+
 	// 通知所有 goroutine 退出
 	close(done)
-	
+
 	// 等待所有 goroutine 完成
 	wg.Wait()
-	
+
 	logrus.Info("程序已退出")
 }
