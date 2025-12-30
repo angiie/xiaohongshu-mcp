@@ -35,7 +35,9 @@ go.work.sum
 # .claude/
 
 # Build artifacts
-xiaohongshu-mcp
+xhs-mcp
+xhs-login
+build/
 
 # Test scripts
 test_*.sh

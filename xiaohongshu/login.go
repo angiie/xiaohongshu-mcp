@@ -2,6 +2,7 @@ package xiaohongshu
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/go-rod/rod"
@@ -18,7 +19,10 @@ func NewLogin(page *rod.Page) *LoginAction {
 
 func (a *LoginAction) CheckLoginStatus(ctx context.Context) (bool, error) {
 	pp := a.page.Context(ctx)
-	pp.MustNavigate("https://www.xiaohongshu.com/explore").MustWaitLoad()
+	currentURL := pp.MustInfo().URL
+	if !strings.Contains(currentURL, "xiaohongshu.com/explore") {
+		pp.MustNavigate("https://www.xiaohongshu.com/explore").MustWaitLoad()
+	}
 
 	time.Sleep(1 * time.Second)
 

@@ -272,12 +272,11 @@ func (s *AppServer) replyCommentHandler(c *gin.Context) {
 
 // healthHandler 健康检查
 func healthHandler(c *gin.Context) {
-	respondSuccess(c, map[string]any{
-		"status":    "healthy",
-		"service":   "xiaohongshu-mcp",
-		"account":   "ai-report",
-		"timestamp": "now",
-	}, "服务正常")
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "ok",
+		"message": "服务运行正常",
+		"version": "1.0.0",
+	})
 }
 
 // myProfileHandler 我的信息

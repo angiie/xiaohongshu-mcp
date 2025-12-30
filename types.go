@@ -109,3 +109,20 @@ type ActionResult struct {
 	Success bool   `json:"success"`
 	Message string `json:"message"`
 }
+
+// PublishContentRequest 简化的发布文章请求
+type PublishContentRequest struct {
+	Title   string   `json:"title" binding:"required" example:"我的第一篇小红书"`
+	Content string   `json:"content" binding:"required" example:"这是文章的正文内容，可以包含多行文字。"`
+	Images  []string `json:"images" binding:"required,min=1" example:"[\"https://example.com/image1.jpg\", \"/path/to/local/image2.png\"]"`
+	Tags    []string `json:"tags,omitempty" example:"[\"美食\", \"生活\", \"分享\"]"`
+}
+
+// PublishContentResponse 简化的发布文章响应
+type PublishContentResponse struct {
+	Success bool   `json:"success" example:"true"`
+	PostID  string `json:"post_id,omitempty" example:"post_12345"`
+	Title   string `json:"title" example:"我的第一篇小红书"`
+	Status  string `json:"status" example:"published"`
+	Message string `json:"message" example:"文章发布成功"`
+}
