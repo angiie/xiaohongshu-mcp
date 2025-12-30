@@ -3,6 +3,9 @@ package main
 import (
 	"net/http"
 
+	"github.com/xpzouying/xiaohongshu-mcp/cookies"
+	"github.com/xpzouying/xiaohongshu-mcp/xiaohongshu"
+
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
@@ -61,6 +64,22 @@ func (s *AppServer) getLoginQrcodeHandler(c *gin.Context) {
 	respondSuccess(c, result, "获取登录二维码成功")
 }
 
+// deleteCookiesHandler 删除 cookies，重置登录状态
+func (s *AppServer) deleteCookiesHandler(c *gin.Context) {
+	err := s.xiaohongshuService.DeleteCookies(c.Request.Context())
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "DELETE_COOKIES_FAILED",
+			"删除 cookies 失败", err.Error())
+		return
+	}
+
+	cookiePath := cookies.GetCookiesFilePath()
+	respondSuccess(c, map[string]interface{}{
+		"cookie_path": cookiePath,
+		"message":     "Cookies 已成功删除，登录状态已重置。下次操作时需要重新登录。",
+	}, "删除 cookies 成功")
+}
+
 // publishHandler 发布内容
 func (s *AppServer) publishHandler(c *gin.Context) {
 	var req PublishRequest
@@ -117,7 +136,24 @@ func (s *AppServer) listFeedsHandler(c *gin.Context) {
 
 // searchFeedsHandler 搜索Feeds
 func (s *AppServer) searchFeedsHandler(c *gin.Context) {
-	keyword := c.Query("keyword")
+	var keyword string
+	var filters xiaohongshu.FilterOption
+
+	switch c.Request.Method {
+	case http.MethodPost:
+		// 对于POST请求，从JSON中获取keyword
+		var searchReq SearchFeedsRequest
+		if err := c.ShouldBindJSON(&searchReq); err != nil {
+			respondError(c, http.StatusBadRequest, "INVALID_REQUEST",
+				"请求参数错误", err.Error())
+			return
+		}
+		keyword = searchReq.Keyword
+		filters = searchReq.Filters
+	default:
+		keyword = c.Query("keyword")
+	}
+
 	if keyword == "" {
 		respondError(c, http.StatusBadRequest, "MISSING_KEYWORD",
 			"缺少关键词参数", "keyword parameter is required")
@@ -125,7 +161,7 @@ func (s *AppServer) searchFeedsHandler(c *gin.Context) {
 	}
 
 	// 搜索 Feeds
-	result, err := s.xiaohongshuService.SearchFeeds(c.Request.Context(), keyword)
+	result, err := s.xiaohongshuService.SearchFeeds(c.Request.Context(), keyword, filters)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "SEARCH_FEEDS_FAILED",
 			"搜索Feeds失败", err.Error())
@@ -145,8 +181,23 @@ func (s *AppServer) getFeedDetailHandler(c *gin.Context) {
 		return
 	}
 
-	// 获取 Feed 详情
-	result, err := s.xiaohongshuService.GetFeedDetail(c.Request.Context(), req.FeedID, req.XsecToken)
+	var result *FeedDetailResponse
+	var err error
+
+	if req.CommentConfig != nil {
+		// 使用配置参数
+		config := xiaohongshu.CommentLoadConfig{
+			ClickMoreReplies:    req.CommentConfig.ClickMoreReplies,
+			MaxRepliesThreshold: req.CommentConfig.MaxRepliesThreshold,
+			MaxCommentItems:     req.CommentConfig.MaxCommentItems,
+			ScrollSpeed:         req.CommentConfig.ScrollSpeed,
+		}
+		result, err = s.xiaohongshuService.GetFeedDetailWithConfig(c.Request.Context(), req.FeedID, req.XsecToken, req.LoadAllComments, config)
+	} else {
+		// 使用默认配置
+		result, err = s.xiaohongshuService.GetFeedDetail(c.Request.Context(), req.FeedID, req.XsecToken, req.LoadAllComments)
+	}
+
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "GET_FEED_DETAIL_FAILED",
 			"获取Feed详情失败", err.Error())
@@ -199,6 +250,26 @@ func (s *AppServer) postCommentHandler(c *gin.Context) {
 	respondSuccess(c, result, result.Message)
 }
 
+// replyCommentHandler 回复指定评论
+func (s *AppServer) replyCommentHandler(c *gin.Context) {
+	var req ReplyCommentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, http.StatusBadRequest, "INVALID_REQUEST",
+			"请求参数错误", err.Error())
+		return
+	}
+
+	result, err := s.xiaohongshuService.ReplyCommentToFeed(c.Request.Context(), req.FeedID, req.XsecToken, req.CommentID, req.UserID, req.Content)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "REPLY_COMMENT_FAILED",
+			"回复评论失败", err.Error())
+		return
+	}
+
+	c.Set("account", "ai-report")
+	respondSuccess(c, result, result.Message)
+}
+
 // healthHandler 健康检查
 func healthHandler(c *gin.Context) {
 	respondSuccess(c, map[string]any{
@@ -207,4 +278,18 @@ func healthHandler(c *gin.Context) {
 		"account":   "ai-report",
 		"timestamp": "now",
 	}, "服务正常")
+}
+
+// myProfileHandler 我的信息
+func (s *AppServer) myProfileHandler(c *gin.Context) {
+	// 获取当前登录用户信息
+	result, err := s.xiaohongshuService.GetMyProfile(c.Request.Context())
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "GET_MY_PROFILE_FAILED",
+			"获取我的主页失败", err.Error())
+		return
+	}
+
+	c.Set("account", "ai-report")
+	respondSuccess(c, map[string]any{"data": result}, "获取我的主页成功")
 }
