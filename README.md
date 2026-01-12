@@ -4,8 +4,8 @@
 [![All Contributors](https://img.shields.io/badge/all_contributors-20-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
-[![善款已捐](https://img.shields.io/badge/善款已捐-CNY%20600.00-brightgreen?style=flat-square)](./DONATIONS.md)
-[![爱心汇聚](https://img.shields.io/badge/爱心汇聚-CNY%20869.97-blue?style=flat-square)](./DONATIONS.md)
+[![善款已捐](https://img.shields.io/badge/善款已捐-CNY%201100.00-brightgreen?style=flat-square)](./DONATIONS.md)
+[![爱心汇聚](https://img.shields.io/badge/爱心汇聚-CNY%20969.95-blue?style=flat-square)](./DONATIONS.md)
 [![Docker Pulls](https://img.shields.io/docker/pulls/xpzouying/xiaohongshu-mcp?style=flat-square&logo=docker)](https://hub.docker.com/r/xpzouying/xiaohongshu-mcp)
 
 MCP for 小红书/xiaohongshu.com。
@@ -799,7 +799,8 @@ Cline 是一个强大的 AI 编程助手，支持 MCP 协议集成。
 
 | 【飞书 3 群】：扫码进入                                                                                                   | 【微信群 12 群】：扫码进入                                                                                                  |
 | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| <img src="https://github.com/user-attachments/assets/9a0ec41a-cb65-4f4e-a0f7-31658a49512d" alt="qrcode_2qun" width="300"> | <img src="https://github.com/user-attachments/assets/b0654c46-46af-498e-8570-92563e1e78c4" alt="WechatIMG119" width="300"> |
+| <img src="https://github.com/user-attachments/assets/9a0ec41a-cb65-4f4e-a0f7-31658a49512d" alt="qrcode_2qun" width="300"> | <img src="https://github.com/user-attachments/assets/af615910-e316-4db9-a454-9efb7b7e0c3a" alt="WechatIMG119" width="300"> |
+
 
 
 ## 🙏 致谢贡献者 ✨
